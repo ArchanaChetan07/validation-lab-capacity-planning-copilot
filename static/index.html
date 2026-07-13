@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Capacity Copilot — Validation Lab Diagnosis Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --white:#F5F7FF;
+    --panel:#FFFFFF;
+    --ink:#151726;
+    --ink-soft:#5B5F76;
+    --line:#E4E7F5;
+    --orange:#FF6A3D;
+    --orange-soft:#FFE7DE;
+    --violet:#7B61FF;
+    --violet-soft:#ECE8FF;
+    --green:#12D992;
+    --green-soft:#DDFCF0;
+    --coral:#FF3B6B;
+    --coral-soft:#FFE3EA;
+  }
+  *{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; }
+  body{
+    margin:0;
+    background:
+      radial-gradient(1200px 600px at 100% -10%, #EFE9FF 0%, transparent 60%),
+      radial-gradient(1000px 500px at -10% 110%, #FFE9E0 0%, transparent 55%),
+      var(--white);
+    color:var(--ink);
+    font-family:'Inter', sans-serif;
+    min-height:100vh;
+  }
+  .display{ font-family:'Space Grotesk', sans-serif; }
+  .mono{ font-family:'IBM Plex Mono', monospace; }
+
+  header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:20px 28px;
+    border-bottom:1px solid var(--line);
+  }
+  .brand{ display:flex; align-items:center; gap:10px; }
+  .brand-mark{
+    width:34px; height:34px; border-radius:9px;
+    background:linear-gradient(135deg, var(--orange), var(--violet));
+    display:flex; align-items:center; justify-content:center;
+    color:white; font-weight:700; font-size:16px;
+    box-shadow:0 6px 16px -6px rgba(123,97,255,0.55);
+  }
+  .brand-title{ font-size:17px; font-weight:600; letter-spacing:-0.01em; }
+  .brand-sub{ font-size:12px; color:var(--ink-soft); font-family:'IBM Plex Mono', monospace; }
+  .status-pill{
+    display:flex; align-items:center; gap:7px;
+    font-family:'IBM Plex Mono', monospace; font-size:11.5px;
+    color:var(--ink-soft);
+    padding:6px 12px; border:1px solid var(--line); border-radius:100px;
+    background:var(--panel);
+  }
+  .status-dot{ width:7px; height:7px; border-radius:50%; background:var(--green); box-shadow:0 0 0 3px var(--green-soft); }
+
+  .layout{
+    display:grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap:0;
+    max-width:1200px;
+    margin:0 auto;
+    min-height:calc(100vh - 77px);
+  }
+  @media (max-width:900px){
+    .layout{ grid-template-columns:1fr; }
+  }
+
+  /* ---------- Conversation pane ---------- */
+  .conversation{
+    padding:28px;
+    border-right:1px solid var(--line);
+    display:flex; flex-direction:column;
+  }
+  @media (max-width:900px){ .conversation{ border-right:none; border-bottom:1px solid var(--line); } }
+
+  .pane-label{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:0.08em;
+    color:var(--ink-soft); text-transform:uppercase; margin-bottom:18px;
+  }
+
+  #chat{ display:flex; flex-direction:column; gap:14px; flex:1; margin-bottom:20px; }
+
+  .empty-state{
+    border:1px dashed var(--line); border-radius:14px; padding:28px;
+    color:var(--ink-soft); font-size:14px; line-height:1.6;
+  }
+  .empty-state b{ color:var(--ink); }
+  .example-chip{
+    display:inline-block; margin-top:10px; padding:6px 12px;
+    background:var(--violet-soft); color:var(--violet); border-radius:8px;
+    font-family:'IBM Plex Mono', monospace; font-size:12.5px; cursor:pointer;
+    border:none;
+  }
+  .example-chip:hover{ background:#E1DAFF; }
+
+  .msg{ display:flex; }
+  .msg.user{ justify-content:flex-end; }
+  .bubble{
+    max-width:82%; padding:13px 16px; border-radius:14px;
+    line-height:1.55; font-size:14.5px; white-space:pre-wrap;
+  }
+  .msg.user .bubble{
+    background:var(--ink); color:white; border-bottom-right-radius:4px;
+  }
+  .msg.bot .bubble{
+    background:var(--panel); border:1px solid var(--line);
+    border-bottom-left-radius:4px;
+  }
+  .bubble .thinking{ color:var(--ink-soft); font-style:italic; }
+
+  form{ display:flex; gap:10px; }
+  input{
+    flex:1; padding:14px 16px; border-radius:12px;
+    border:1px solid var(--line); background:var(--panel);
+    font-family:'Inter', sans-serif; font-size:14.5px; color:var(--ink);
+    outline:none; transition:border-color .15s;
+  }
+  input:focus{ border-color:var(--violet); box-shadow:0 0 0 3px var(--violet-soft); }
+  button.send{
+    padding:0 22px; border:none; border-radius:12px;
+    background:var(--ink); color:white; font-weight:600; font-size:14px;
+    cursor:pointer; transition:transform .1s, background .15s;
+  }
+  button.send:hover:not(:disabled){ background:#2A2D42; }
+  button.send:active:not(:disabled){ transform:scale(0.97); }
+  button.send:disabled{ opacity:0.45; cursor:default; }
+  button.send:focus-visible, .example-chip:focus-visible, input:focus-visible{
+    outline:2px solid var(--violet); outline-offset:2px;
+  }
+
+  /* ---------- Diagnosis console ---------- */
+  .console{
+    padding:28px; background:linear-gradient(180deg, #FBFBFF 0%, var(--white) 100%);
+    position:relative; overflow:hidden;
+  }
+  .console::before{
+    content:''; position:absolute; inset:0;
+    background:repeating-linear-gradient(180deg, rgba(123,97,255,0.035) 0px, rgba(123,97,255,0.035) 1px, transparent 1px, transparent 26px);
+    pointer-events:none;
+  }
+  @media (prefers-reduced-motion:no-preference){
+    .console::after{
+      content:''; position:absolute; left:0; right:0; height:120px;
+      background:linear-gradient(180deg, transparent, rgba(123,97,255,0.06), transparent);
+      animation:scan 7s linear infinite;
+      pointer-events:none;
+    }
+  }
+  @keyframes scan{ 0%{ top:-120px; } 100%{ top:100%; } }
+
+  .console-inner{ position:relative; z-index:1; }
+
+  .console-idle{
+    color:var(--ink-soft); font-size:14px; line-height:1.7; padding-top:8px;
+  }
+  .console-idle .big{
+    font-family:'Space Grotesk', sans-serif; font-size:20px; color:var(--ink);
+    margin-bottom:8px; font-weight:600;
+  }
+
+  .diag-card{ display:none; }
+  .diag-card.show{ display:block; animation:fadeUp .4s ease both; }
+  @keyframes fadeUp{ from{ opacity:0; transform:translateY(8px); } to{ opacity:1; transform:none; } }
+
+  .constraint-row{ display:flex; align-items:center; gap:10px; margin-bottom:22px; }
+  .lock-badge{
+    display:flex; align-items:center; gap:7px;
+    padding:7px 13px; border-radius:100px;
+    background:var(--coral-soft); color:var(--coral);
+    font-family:'IBM Plex Mono', monospace; font-size:12.5px; font-weight:500;
+  }
+  @media (prefers-reduced-motion:no-preference){
+    .lock-badge{ animation:pulse 1.8s ease-in-out infinite; }
+  }
+  @keyframes pulse{ 0%,100%{ box-shadow:0 0 0 0 rgba(255,59,107,0.25); } 50%{ box-shadow:0 0 0 6px rgba(255,59,107,0); } }
+
+  .section-title{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:0.08em;
+    text-transform:uppercase; color:var(--ink-soft); margin:0 0 10px;
+  }
+
+  /* Time-Machine Bar */
+  .tm-bar-wrap{ margin-bottom:26px; }
+  .tm-row{ display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+  .tm-tag{ width:64px; flex-shrink:0; font-family:'IBM Plex Mono', monospace; font-size:11.5px; color:var(--ink-soft); }
+  .tm-track{
+    flex:1; height:26px; border-radius:8px; background:var(--panel);
+    border:1px solid var(--line); position:relative; overflow:hidden;
+  }
+  .tm-fill{
+    height:100%; border-radius:7px 0 0 7px;
+    transition:width 1.1s cubic-bezier(.16,1,.3,1);
+    display:flex; align-items:center; justify-content:flex-end;
+    padding-right:8px;
+  }
+  .tm-fill.baseline{ background:linear-gradient(90deg, var(--orange), #FF8F6B); }
+  .tm-fill.fixed{ background:linear-gradient(90deg, var(--green), #4FF0B7); }
+  .tm-value{ font-family:'IBM Plex Mono', monospace; font-size:12px; color:white; font-weight:600; }
+
+  .improvement-tag{
+    display:inline-flex; align-items:center; gap:6px;
+    font-family:'IBM Plex Mono', monospace; font-size:13px; color:var(--green);
+    background:var(--green-soft); padding:5px 11px; border-radius:8px; font-weight:600;
+  }
+
+  .stat-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:22px; }
+  .stat{ border:1px solid var(--line); border-radius:10px; padding:12px 14px; background:var(--panel); }
+  .stat-label{ font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.06em; }
+  .stat-value{ font-family:'IBM Plex Mono', monospace; font-size:18px; font-weight:600; margin-top:4px; }
+
+  .notes-box{
+    margin-top:20px; padding:12px 14px; border-radius:10px;
+    background:var(--violet-soft); border:1px solid #DCD4FF;
+  }
+  .notes-box .note{ font-size:12.5px; color:#4B3FBF; line-height:1.5; margin:4px 0; }
+
+  ::-webkit-scrollbar{ width:8px; }
+  ::-webkit-scrollbar-thumb{ background:var(--line); border-radius:8px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="brand-mark display">C</div>
+    <div>
+      <div class="brand-title display">Capacity Copilot</div>
+      <div class="brand-sub">validation-lab diagnosis console</div>
+    </div>
+  </div>
+  <div class="status-pill"><span class="status-dot"></span>simulator ready</div>
+</header>
+
+<div class="layout">
+
+  <!-- Conversation -->
+  <div class="conversation">
+    <div class="pane-label">Ask about a regression campaign</div>
+    <div id="chat">
+      <div class="empty-state" id="emptyState">
+        Describe a test campaign — <b>test count, rack count, license seats, deadline</b> —
+        and the console on the right will show what's actually binding your schedule.
+        <div>
+          <button class="example-chip" type="button" data-q="50000 tests, 12 racks, 4 license seats, deadline 96 hours">try: 50000 tests, 12 racks, 4 license seats →</button>
+        </div>
+      </div>
+    </div>
+    <form id="form">
+      <input id="input" placeholder="e.g. 8000 tests, 6 racks, 2 license seats..." autocomplete="off" />
+      <button class="send" id="send" type="submit">Ask</button>
+    </form>
+  </div>
+
+  <!-- Diagnosis console -->
+  <div class="console">
+    <div class="console-inner">
+      <div class="pane-label">Diagnosis console</div>
+
+      <div class="console-idle" id="consoleIdle">
+        <div class="big display">Waiting on a query</div>
+        No simulation has run yet. Once you ask a question, the binding
+        resource — racks, licenses, or the slowest test suite — lights up here,
+        backed by real Monte Carlo simulation numbers.
+      </div>
+
+      <div class="diag-card" id="diagCard">
+        <div class="constraint-row">
+          <span class="lock-badge" id="lockBadge">🔒 BINDING: —</span>
+        </div>
+
+        <div class="tm-bar-wrap">
+          <div class="section-title">Completion time — before / after fix</div>
+          <div class="tm-row">
+            <span class="tm-tag">Current</span>
+            <div class="tm-track"><div class="tm-fill baseline" id="barBaseline" style="width:0%"><span class="tm-value" id="valBaseline"></span></div></div>
+          </div>
+          <div class="tm-row">
+            <span class="tm-tag">If fixed</span>
+            <div class="tm-track"><div class="tm-fill fixed" id="barFixed" style="width:0%"><span class="tm-value" id="valFixed"></span></div></div>
+          </div>
+          <span class="improvement-tag" id="improvementTag">↓ 0% faster</span>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat">
+            <div class="stat-label">P90 completion</div>
+            <div class="stat-value" id="statBaseline">—</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Binding constraint</div>
+            <div class="stat-value" id="statConstraint" style="font-size:13px">—</div>
+          </div>
+        </div>
+
+        <div class="notes-box" id="notesBox" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const chat = document.getElementById('chat');
+const form = document.getElementById('form');
+const input = document.getElementById('input');
+const send = document.getElementById('send');
+const emptyState = document.getElementById('emptyState');
+
+const consoleIdle = document.getElementById('consoleIdle');
+const diagCard = document.getElementById('diagCard');
+const lockBadge = document.getElementById('lockBadge');
+const barBaseline = document.getElementById('barBaseline');
+const barFixed = document.getElementById('barFixed');
+const valBaseline = document.getElementById('valBaseline');
+const valFixed = document.getElementById('valFixed');
+const improvementTag = document.getElementById('improvementTag');
+const statBaseline = document.getElementById('statBaseline');
+const statConstraint = document.getElementById('statConstraint');
+const notesBox = document.getElementById('notesBox');
+
+function addMessage(text, cls) {
+  if (emptyState.parentNode) emptyState.remove();
+  const row = document.createElement('div');
+  row.className = 'msg ' + cls;
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  bubble.textContent = text;
+  row.appendChild(bubble);
+  chat.appendChild(row);
+  chat.parentElement.scrollTop = chat.parentElement.scrollHeight;
+  return bubble;
+}
+
+function friendlyConstraint(label) {
+  if (!label) return '—';
+  const [kind, name] = label.split(':');
+  const map = { rack_count: 'Rack capacity', license_seats: 'License seats', dominant_suite: 'Slow test suite' };
+  const pretty = map[kind] || kind;
+  return name ? `${pretty} (${name})` : pretty;
+}
+
+function renderDiagnosis(data) {
+  consoleIdle.style.display = 'none';
+  diagCard.classList.add('show');
+
+  const baseline = data.completion_time_hours;
+  const improvementPct = data.improvement_pct;
+  const fixed = baseline * (1 - improvementPct / 100);
+  const maxVal = Math.max(baseline, fixed, 0.001);
+
+  lockBadge.textContent = `🔒 BINDING: ${friendlyConstraint(data.binding_constraint)}`;
+  statConstraint.textContent = friendlyConstraint(data.binding_constraint);
+  statBaseline.textContent = `${baseline.toFixed(1)}h`;
+  improvementTag.textContent = `↓ ${improvementPct.toFixed(1)}% faster if relieved`;
+
+  valBaseline.textContent = `${baseline.toFixed(1)}h`;
+  valFixed.textContent = `${fixed.toFixed(1)}h`;
+
+  // trigger transition on next frame so width animates from 0
+  barBaseline.style.width = '0%';
+  barFixed.style.width = '0%';
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      barBaseline.style.width = `${(baseline / maxVal) * 100}%`;
+      barFixed.style.width = `${(fixed / maxVal) * 100}%`;
+    }, 30);
+  });
+
+  if (data.notes && data.notes.length) {
+    notesBox.style.display = 'block';
+    notesBox.innerHTML = data.notes.map(n => `<div class="note">⚠ ${n}</div>`).join('');
+  } else {
+    notesBox.style.display = 'none';
+  }
+}
+
+async function ask(query) {
+  addMessage(query, 'user');
+  send.disabled = true;
+  const thinkingBubble = addMessage('Simulating campaign...', 'bot');
+  thinkingBubble.classList.add('thinking');
+
+  try {
+    const res = await fetch('/ask', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      thinkingBubble.classList.remove('thinking');
+      thinkingBubble.textContent = data.detail || 'Something went wrong running that simulation.';
+      return;
+    }
+    thinkingBubble.classList.remove('thinking');
+    thinkingBubble.textContent = data.answer;
+    renderDiagnosis(data);
+  } catch (err) {
+    thinkingBubble.classList.remove('thinking');
+    thinkingBubble.textContent = 'Network error: ' + err.message;
+  } finally {
+    send.disabled = false;
+  }
+}
+
+form.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const q = input.value.trim();
+  if (!q) return;
+  input.value = '';
+  ask(q);
+});
+
+document.querySelectorAll('.example-chip').forEach(chip => {
+  chip.addEventListener('click', () => ask(chip.dataset.q));
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+name: B4_rack_bound
+description: "Only 3 rack(s), 30 license seats (abundant) for 60 tests \u2014 rack\
+  \ count should bind regardless of license seats."
+known_ground_truth_bottleneck: rack_count
+racks:
+  count: 3
+  type: fpga_prototype
+license_pools:
+  dft_tool: 30
+test_suites:
+  dft:
+    mean_runtime_minutes: 6
+    required_license: dft_tool
+campaign_test_counts:
+  dft: 60
+total_tests: 60

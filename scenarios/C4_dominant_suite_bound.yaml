@@ -1,0 +1,20 @@
+name: C4_dominant_suite_bound
+description: "100 fast tests (6min) + 20 slow tests (90min) with adequate racks/licenses\
+  \ \u2014 'slow_suite' should dominate the critical path."
+known_ground_truth_bottleneck: dominant_suite
+racks:
+  count: 15
+  type: fpga_prototype
+license_pools:
+  shared_tool: 15
+test_suites:
+  fast_suite:
+    mean_runtime_minutes: 6
+    required_license: shared_tool
+  slow_suite:
+    mean_runtime_minutes: 90
+    required_license: shared_tool
+campaign_test_counts:
+  fast_suite: 100
+  slow_suite: 20
+total_tests: 120

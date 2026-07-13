@@ -1,0 +1,16 @@
+name: A5_license_bound
+description: "30 racks (abundant), only 3 license seat(s) for 80 tests \u2014 license\
+  \ pool should bind regardless of rack count."
+known_ground_truth_bottleneck: license_seats
+racks:
+  count: 30
+  type: fpga_prototype
+license_pools:
+  dft_tool: 3
+test_suites:
+  dft:
+    mean_runtime_minutes: 6
+    required_license: dft_tool
+campaign_test_counts:
+  dft: 80
+total_tests: 80
