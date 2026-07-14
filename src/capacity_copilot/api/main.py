@@ -4,12 +4,12 @@ import logging
 import os
 import time
 
-from fastapi import FastAPI, Header, HTTPException, Request
+from fastapi import FastAPI, Header, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
-from prometheus_client import Counter, Histogram, make_asgi_app
+from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
 
 from capacity_copilot.analysis.sensitivity_v2 import diagnose
 from capacity_copilot.reasoning.parser import parse_query
@@ -34,8 +34,6 @@ app.add_middleware(
 REQUEST_COUNT = Counter("copilot_requests_total", "Total /ask requests")
 REQUEST_ERRORS = Counter("copilot_request_errors_total", "Total /ask errors", ["kind"])
 REQUEST_LATENCY = Histogram("copilot_request_latency_seconds", "Latency of /ask requests")
-
-app.mount("/metrics", make_asgi_app())
 
 # Optional shared-secret auth: if COPILOT_API_KEY is set in the environment,
 # /ask requires header `X-API-Key: <value>`. Unset by default so the demo
@@ -128,6 +126,12 @@ def ready():
     """Readiness check: confirms the API key is configured, without making a
     live upstream call on every probe."""
     return {"status": "ok", "llm_configured": bool(os.environ.get("ANTHROPIC_API_KEY"))}
+
+
+@app.get("/metrics")
+def metrics():
+    """Prometheus scrape endpoint (no trailing slash required)."""
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 # Serve the chat UI at "/" — keep this mount LAST so it doesn't shadow /ask, /health, /metrics
